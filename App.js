@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import RadioScreen from './src/screens/RadioScreen';
-import XperienceScreen from './src/screens/XperienceScreenRSS';
+import XperienceScreen from './src/screens/XperienceScreen';
 import ShareScreen from './src/screens/ShareScreen';
 import TalkBackScreen from './src/screens/TalkBackScreen';
 import ProfileScreen from './src/screens/ProfileScreen';

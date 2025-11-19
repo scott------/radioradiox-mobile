@@ -14,11 +14,22 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.radioradiox.app"
+      "bundleIdentifier": "com.radioradiox.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "package": "com.radioradiox.app"
     },
-    "scheme": "radioradiox"
+    "scheme": "radioradiox",
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }

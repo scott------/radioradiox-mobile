@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,17 +7,12 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
-
-const RADIO_STREAM_URL = 'https://www.ophanim.net:8444/s/9220';
+import useRadio from '../hooks/useRadio';
 
 export default function RadioScreen() {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [volume, setVolume] = useState(1.0);
-  const webViewRef = useRef(null);
+  const { isPlaying, isLoading, volume, togglePlayPause, updateVolume } = useRadio();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -42,114 +37,8 @@ export default function RadioScreen() {
     }
   }, [isPlaying]);
 
-  // Hidden HTML with audio player
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { margin: 0; padding: 0; background: transparent; }
-        </style>
-      </head>
-      <body>
-        <audio id="radioPlayer" autoplay>
-          <source src="${RADIO_STREAM_URL}" type="audio/mpeg">
-        </audio>
-        <script>
-          const audio = document.getElementById('radioPlayer');
-          
-          audio.addEventListener('play', () => {
-            window.ReactNativeWebView && window.ReactNativeWebView.postMessage('playing');
-          });
-          
-          audio.addEventListener('pause', () => {
-            window.ReactNativeWebView && window.ReactNativeWebView.postMessage('paused');
-          });
-          
-          audio.addEventListener('error', (e) => {
-            window.ReactNativeWebView && window.ReactNativeWebView.postMessage('error');
-          });
-          
-          audio.addEventListener('canplay', () => {
-            window.ReactNativeWebView && window.ReactNativeWebView.postMessage('ready');
-          });
-
-          window.addEventListener('message', (event) => {
-            const data = event.data;
-            if (data === 'play') {
-              audio.play();
-            } else if (data === 'pause') {
-              audio.pause();
-            } else if (data.startsWith('volume:')) {
-              audio.volume = parseFloat(data.split(':')[1]);
-            }
-          });
-        </script>
-      </body>
-    </html>
-  `;
-
-  const handleMessage = (event) => {
-    const message = event.nativeEvent.data;
-    if (message === 'playing') {
-      setIsPlaying(true);
-    } else if (message === 'paused') {
-      setIsPlaying(false);
-    } else if (message === 'ready') {
-      setLoading(false);
-    }
-  };
-
-  const togglePlayPause = () => {
-    if (webViewRef.current) {
-      const command = isPlaying ? 'pause' : 'play';
-      webViewRef.current.injectJavaScript(`
-        (function() {
-          const audio = document.getElementById('radioPlayer');
-          if (audio) {
-            if ('${command}' === 'pause') {
-              audio.pause();
-            } else {
-              audio.play();
-            }
-          }
-        })();
-        true;
-      `);
-    }
-  };
-
-  const adjustVolume = (newVolume) => {
-    const vol = Math.max(0, Math.min(1, newVolume));
-    setVolume(vol);
-    if (webViewRef.current) {
-      webViewRef.current.injectJavaScript(`
-        (function() {
-          const audio = document.getElementById('radioPlayer');
-          if (audio) {
-            audio.volume = ${vol};
-          }
-        })();
-        true;
-      `);
-    }
-  };
-
   return (
     <View style={styles.container}>
-      {/* Hidden WebView for audio */}
-      <WebView
-        ref={webViewRef}
-        source={{ html: htmlContent }}
-        style={styles.hiddenWebview}
-        onMessage={handleMessage}
-        mediaPlaybackRequiresUserAction={false}
-        allowsInlineMediaPlayback={true}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-      />
-
       {/* Custom Player UI */}
       <View style={styles.playerContainer}>
         {/* Logo Section */}
@@ -179,9 +68,9 @@ export default function RadioScreen() {
         <TouchableOpacity
           style={styles.mainButton}
           onPress={togglePlayPause}
-          disabled={loading}
+          disabled={isLoading}
         >
-          {loading ? (
+          {isLoading ? (
             <ActivityIndicator size="large" color={COLORS.secondaryBackground} />
           ) : (
             <>
@@ -207,19 +96,19 @@ export default function RadioScreen() {
             <View style={styles.volumeControls}>
               <TouchableOpacity
                 style={styles.volumeButton}
-                onPress={() => adjustVolume(0)}
+                onPress={() => updateVolume(0)}
               >
                 <Ionicons name="volume-mute" size={20} color={COLORS.tertiary} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.volumeButton}
-                onPress={() => adjustVolume(0.5)}
+                onPress={() => updateVolume(0.5)}
               >
                 <Text style={styles.volumeButtonText}>50%</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.volumeButton}
-                onPress={() => adjustVolume(1.0)}
+                onPress={() => updateVolume(1.0)}
               >
                 <Text style={styles.volumeButtonText}>100%</Text>
               </TouchableOpacity>
@@ -245,7 +134,7 @@ export default function RadioScreen() {
         </View>
       </View>
 
-      {loading && (
+      {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={COLORS.primaryText} />
           <Text style={styles.loadingText}>Connecting to RadioRadioX...</Text>
@@ -259,11 +148,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.primary,
-  },
-  hiddenWebview: {
-    width: 0,
-    height: 0,
-    opacity: 0,
   },
   playerContainer: {
     flex: 1,
